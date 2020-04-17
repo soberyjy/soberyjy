@@ -1,0 +1,195 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string>
+#include <string.h>
+#include <iostream>
+using namespace std;
+
+char passage[10000];//读取的本文
+int wordnum;    //单词总数
+int line;       //文本行数
+struct words
+{
+	char word[18]; //单词
+	int counts;    //出现次数
+	int line;   //所在行数
+	int appeared;  //该词是否在前文出现，0为未出现过
+};
+struct words w[10000];
+void init(){//初始化
+	int i;
+	wordnum = 0;
+	line = 1;
+	for (i = 0; i < 10000; i++){
+		w[i].counts = 1;
+		w[i].line = 1;
+		w[i].appeared = 0;
+	}
+}
+int read(char *str)  //1.读取文档并存入数组
+{
+	init();
+	FILE *fp;
+	int i = 0;
+	char ch;
+	if ((fp = fopen(str, "r")) == NULL){
+		exit(0);
+	}
+	while (!feof(fp)){
+		passage[i] = fgetc(fp);
+		i++;
+	}//将文本读入到passage数组
+	passage[i] = '\0';
+}
+void divide() //2.分词存储
+{
+	int i,j,k,n=0;
+	char temp[20];
+	//先去除文本所有特殊符号（除换行符外），用空格代替,将大写字母变为小写字母
+	for (i = 0; passage[i] != '\0'; i++){
+		if (passage[i]<65&&passage[i]!='\n' || (passage[i]>90 && passage[i]<97) || passage[i]>122)
+			passage[i] = ' ';
+		if (passage[i] >= 65 && passage[i] <= 90)
+			passage[i] += 32;
+	}
+
+	//对文章切片，默认为空格切，单词赋值给words
+	//printf("%s\n", passage);
+	for (i = 0,j=0; passage[i] != '\0'; i++){
+		if (passage[i] != ' '&&passage[i]!='\n'){//该字符是字母
+			temp[j] = passage[i];
+			j++;           //将单词存入temp数组
+		}
+		else if (passage[i - 1] >= 97 && passage[i - 1] <= 122){
+			temp[j] = '\0';
+			strcpy(w[wordnum].word, temp);
+			for (k = 0; k < wordnum; k++){//统计词频
+				if (strcmp(w[wordnum].word, w[k].word) == 0){
+					w[wordnum].counts++;
+					w[k].counts++;
+					w[wordnum].appeared = 1;
+				}
+			} //与出现过的单词比较，统计词频
+			w[wordnum].line = line;
+			wordnum++;
+			j = 0;
+		}
+		if (passage[i] == '\n'){
+			line++;
+			j = 0;
+		}
+	}
+}
+void frequency()//统计词频
+{
+	int i, n=0;
+	printf("每个单词出现次数：\n");
+	for (i = 0; i < wordnum; i++){
+		if (w[i].appeared == 0){
+			printf("单词：%s   频数：%d  \n", w[i].word, w[i].counts);
+			n++;
+		}
+	}
+	printf("不同的单词数：%d\n", n);
+}
+void locate(char *s)//3.查找位置，及该行出现的次数
+{
+	int i, j, k,t, count = 0;//i第i个单词，j行数，k该行第几个，t该行出现多少次   count全文出现次数
+	printf("该词出现在：\n");
+	for (i=0,j = 1; j <= line&&i<wordnum; j++){
+		for(k=0,t=0;;i++){
+			k++;
+			if (strcmp(s, w[i].wordw[k].counts++;) == 0)    //如果找到查询的单词
+			{
+				printf("   第%d行  第%d个单词 全文第%d个单词\n", j, k,i+1);
+				t++;
+				count++;
+			}
+			if (w[i].line != w[i + 1].line)    //如果切换到下一行，则跳出循环，重新统计改行
+				break;
+		}
+		i++;
+		printf("在第%d行共出现：%d次\n", j, t);
+	}
+	if (count == 0)
+		printf("无该单词\n");
+}
+int count(char *s)//统计s在本文单词总数
+{
+	int i, count;
+	for (i = 0,count=0; i < wordnum; i++){
+		if (strcmp(s, w[i].word) == 0)
+			count++;
+	}
+	return count;
+}
+void Max(int n,char *s)//4.输出该单词出现最多的前n个文件
+{
+	int wnum[10],i,j,temp;   //例如wnum[10]={2,6,1,3,6,7,15,3,4,8}
+	char tem[10],f[10][10] = { "1.txt", "2.txt", "3.txt", "4.txt", "5.txt", "6.txt", "7.txt", "8.txt", "9.txt", "10.txt" };
+	for (i = 0; i < 10; i++){
+		read(f[i]);
+		divide();
+		wnum[i] = count(s);
+	}
+	for (i = 0; i < 9; i++){//根据出现次数进行逆序排序
+		for (j = 0; j < 8; j++){
+			if (wnum[j] < wnum[j + 1]){
+				temp = wnum[j];
+				wnum[j] = wnum[j + 1];
+				wnum[j + 1] = temp;
+				strcpy(tem, f[j]);
+				strcpy(f[j], f[j + 1]);
+				strcpy(f[j+1],tem);
+			}
+		}
+	}
+	printf("单词%s出现最多的%d个文件：\n",s,n);
+	for (i = 0; i < n; i++){
+		printf("%s :共%d个\n",f[i],wnum[i]);
+	}
+}
+int main()
+{
+	char file[5], seek[20];
+	int fun, n;
+	printf("————————————————<文本词频统计和定位>——————————————\n");
+	printf("—————————-—功能1：统计单个文档不同单词数和词频————————————\n");
+	printf("—————————-—功能2：输入单词，输出在文本出现位置，以及该行出现次数———\n");
+	printf("—————————-—功能3：输入单词，输出该单词出现最多的前n个文件———————\n");
+	while (1){
+		printf("\n请输入要实现的功能（输入0结束程序）：");
+		scanf("%d", &fun);
+		switch (fun){
+		case 1:
+			printf("请输入要统计的文件：\n");
+			scanf("%s", file);
+			read(file);
+			divide();
+			frequency();
+			continue;
+		case 2:
+			printf("请输入要查找的文件：\n");
+			scanf("%s", file);
+			read(file);
+			divide();
+			printf("请输入要查找的单词：\n");
+			scanf("%s", seek);
+			locate(seek);
+			continue;
+		case 3:
+			printf("请输入要查找的单词：\n");
+			scanf("%s", seek);
+			printf("请输入n：\n");
+			scanf("%d", &n);
+			Max(n,seek);
+			continue;
+		case 0:
+			return 1;
+		}
+	}
+	system("pause");
+	return 1;
+}
+
+//模块划分：读入模块，分词存储模块，查找模块，统计最多模块
